@@ -31,18 +31,16 @@ function playThroughTurn(state: ReturnType<typeof startNight>, correct = 2, skip
 }
 
 describe('prompts', () => {
-  it('only lists Food until other decks hit size', () => {
-    expect(getPlayableCategories()).toEqual(['Food']);
-    expect(isDeckReady('Food')).toBe(true);
-    expect(isDeckReady('Cars')).toBe(false);
-  });
-
-  it('Family deck omits After Dark cards', () => {
-    const family = getPromptDeck('Food', 'family');
-    const afterDark = getPromptDeck('Food', 'afterDark');
-    expect(family.length).toBeGreaterThanOrEqual(MIN_FAMILY_CARDS);
-    expect(family.every((p) => p.rating === 'family')).toBe(true);
-    expect(afterDark.length - family.length).toBeGreaterThanOrEqual(MIN_AFTER_DARK_CARDS);
+  it('ships every named deck at full size', () => {
+    expect(getPlayableCategories()).toEqual(['Food', 'Places', 'People', 'Slang', 'Sport', 'Cars', 'Music']);
+    for (const category of getPlayableCategories()) {
+      expect(isDeckReady(category)).toBe(true);
+      const family = getPromptDeck(category, 'family');
+      const afterDark = getPromptDeck(category, 'afterDark');
+      expect(family.length).toBeGreaterThanOrEqual(MIN_FAMILY_CARDS);
+      expect(family.every((p) => p.rating === 'family')).toBe(true);
+      expect(afterDark.length - family.length).toBeGreaterThanOrEqual(MIN_AFTER_DARK_CARDS);
+    }
   });
 });
 

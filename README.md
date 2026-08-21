@@ -7,6 +7,7 @@ Izit a game? Izit a vibe check? Izit another fun time? **Izit!** is a Mzansi Hea
 | Path | Description |
 |------|-------------|
 | `mobile/` | Expo / React Native app |
+| `landing/` | Marketing page (open `landing/index.html`) |
 
 ## Quick start
 
@@ -15,5 +16,7 @@ cd mobile
 npm install
 npm start
 ```
+
+Open [landing/index.html](landing/index.html) in a browser for the public page.
 
 See [mobile/README.md](mobile/README.md) for play, test, and ship notes.

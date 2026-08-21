@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Izit — Mzansi Heads Up</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;700;800&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --cream: #f3efe6;
+        --ink: #111;
+        --soft: #5c574e;
+        --yellow: #f5c518;
+        --red: #e23d28;
+        --blue: #3d7afc;
+        --card: #fffcf4;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: Figtree, sans-serif;
+      }
+      body {
+        overflow-x: hidden;
+      }
+      .chip {
+        position: absolute;
+        border-radius: 8px;
+        pointer-events: none;
+      }
+      header {
+        padding: 28px 7vw 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .word {
+        font-family: Fraunces, serif;
+        font-style: italic;
+        font-weight: 900;
+        font-size: clamp(42px, 8vw, 88px);
+        margin: 0;
+        line-height: 0.9;
+      }
+      .star {
+        width: 36px;
+        height: 36px;
+        background: var(--yellow);
+        clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        animation: spin 6s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes bob {
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 40px;
+        padding: 28px 7vw 64px;
+        align-items: center;
+      }
+      @media (max-width: 860px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+      }
+      h1 {
+        font-family: Fraunces, serif;
+        font-weight: 700;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 1.05;
+        margin: 0 0 16px;
+      }
+      .lede {
+        font-size: 18px;
+        line-height: 1.5;
+        color: var(--soft);
+        max-width: 38ch;
+      }
+      .cta {
+        display: inline-block;
+        margin-top: 28px;
+        background: var(--ink);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        padding: 16px 28px;
+        border-radius: 999px;
+      }
+      .cta:hover {
+        transform: scale(0.98);
+      }
+      .stage {
+        position: relative;
+        height: 380px;
+        animation: bob 4.4s ease-in-out infinite;
+      }
+      .stage img {
+        position: absolute;
+        left: 48px;
+        top: 48px;
+        width: 280px;
+        height: 280px;
+        object-fit: cover;
+        border-radius: 32px;
+      }
+      .y {
+        width: 110px;
+        height: 32px;
+        background: var(--yellow);
+        top: 24px;
+        left: 12px;
+        transform: rotate(-11deg);
+      }
+      .r {
+        width: 42px;
+        height: 42px;
+        background: var(--red);
+        top: 8px;
+        right: 40px;
+        transform: rotate(16deg);
+      }
+      .b {
+        width: 78px;
+        height: 24px;
+        background: var(--blue);
+        bottom: 36px;
+        right: 24px;
+        transform: rotate(-8deg);
+      }
+      .how {
+        padding: 0 7vw 80px;
+      }
+      .how h2,
+      .decks h2 {
+        font-family: Fraunces, serif;
+        font-size: 32px;
+        margin: 0 0 22px;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 860px) {
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+      .step {
+        background: var(--card);
+        border-radius: 28px;
+        padding: 22px;
+        min-height: 140px;
+      }
+      .step b {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .s1 b {
+        color: var(--red);
+      }
+      .s2 b {
+        color: var(--blue);
+      }
+      .s3 b {
+        color: #b88912;
+      }
+      .decks {
+        padding: 0 7vw 90px;
+      }
+      .pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .pill {
+        background: var(--red);
+        color: #fff;
+        font-weight: 800;
+        padding: 12px 18px;
+        border-radius: 999px;
+      }
+      .pill:nth-child(2) {
+        background: var(--blue);
+      }
+      .pill:nth-child(3) {
+        background: var(--yellow);
+        color: var(--ink);
+      }
+      .pill:nth-child(4) {
+        background: var(--ink);
+      }
+      .pill:nth-child(5) {
+        background: var(--blue);
+      }
+      .pill:nth-child(6) {
+        background: var(--red);
+      }
+      .pill:nth-child(7) {
+        background: #1f7a4d;
+      }
+      footer {
+        padding: 0 7vw 40px;
+        color: var(--soft);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chip y" style="position: fixed; top: 120px; left: -10px; width: 70px; height: 20px; background: var(--yellow); transform: rotate(-18deg)"></div>
+    <div class="chip r" style="position: fixed; top: 40%; right: -8px; width: 28px; height: 28px; background: var(--red); transform: rotate(22deg)"></div>
+
+    <header>
+      <p class="word">Izit</p>
+      <span class="star" aria-hidden="true"></span>
+    </header>
+
+    <section class="hero">
+      <div>
+        <h1>Phone on the forehead. Prove you know the flavour.</h1>
+        <p class="lede">
+          Mzansi Heads Up. Pairs of two. Partner clues. Tilt down when you get it, up to skip. The pair with the most points wins the night.
+        </p>
+        <a class="cta" href="#how">See how a night works</a>
+      </div>
+      <div class="stage">
+        <div class="chip y"></div>
+        <div class="chip r"></div>
+        <div class="chip b"></div>
+        <img src="landing-collage.png" alt="Friends around a braai" />
+      </div>
+    </section>
+
+    <section class="how" id="how">
+      <h2>How a night works</h2>
+      <div class="steps">
+        <article class="step s1"><b>01</b> Name the room. Pair 1 with 2, 3 with 4.</article>
+        <article class="step s2"><b>02</b> Guesser holds the phone to their forehead, screen out.</article>
+        <article class="step s3"><b>03</b> Only the partner clues. No saying the word.</article>
+        <article class="step s1"><b>04</b> Tilt down for correct. Tilt up to skip.</article>
+        <article class="step s2"><b>05</b> Sixty seconds, then pass inside the pair.</article>
+        <article class="step s3"><b>06</b> Everyone guesses once. Highest pair total wins.</article>
+      </div>
+    </section>
+
+    <section class="decks">
+      <h2>Decks</h2>
+      <div class="pills">
+        <span class="pill">Food</span>
+        <span class="pill">Places</span>
+        <span class="pill">People</span>
+        <span class="pill">Slang</span>
+        <span class="pill">Sport</span>
+        <span class="pill">Cars</span>
+        <span class="pill">Music</span>
+      </div>
+    </section>
+
+    <footer>Family is clean. After Dark adds the drinking cards. English answers, Mzansi flavour in the word.</footer>
+  </body>
+</html>

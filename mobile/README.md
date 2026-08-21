@@ -5,12 +5,12 @@ Mzansi Heads Up on one phone. Built with Expo and React Native.
 ## How to play
 
 1. **Setup** — even number of named players (minimum 4), pair 1–2 / 3–4, pick Family or After Dark, pick a deck.
-2. **Ready** — guesser puts the phone on their forehead, screen out. Only their partner gives clues.
+2. **Ready** — guesser puts the phone to their forehead, screen out. Only their partner gives clues.
 3. **Play** — 60 seconds. Tilt down for correct, tilt up to skip. Tiny buttons are a fallback if tilt is dead.
 4. **Recap** — check the words, add to the pair total, pass inside the pair, then the next pair.
 5. **Winner** — everyone guesses once. Highest pair total wins. Play another round keeps the same pairs.
 
-Only **Food** is on the setup screen until other decks hit 40 Family cards and 15 After Dark cards.
+Decks: Food, Places, People, Slang, Sport, Cars, Music. Family is clean. After Dark adds the drinking cards.
 
 ## Prerequisites
 

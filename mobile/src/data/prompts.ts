@@ -1,6 +1,7 @@
+import { CARS, MUSIC, PEOPLE, PLACES, SLANG, SPORT } from './decks';
 import type { ContentRating, Prompt } from '../state/gameTypes';
 
-export const DECK_CATEGORIES = ['Food', 'Places', 'People', 'Slang', 'Sport', 'Cars'] as const;
+export const DECK_CATEGORIES = ['Food', 'Places', 'People', 'Slang', 'Sport', 'Cars', 'Music'] as const;
 export type DeckCategory = (typeof DECK_CATEGORIES)[number];
 
 export const MIN_FAMILY_CARDS = 40;
@@ -77,7 +78,16 @@ const FOOD_AFTER_DARK: Prompt[] = [
   food('a16', 'Jäger bomb', 'afterDark'),
 ];
 
-export const PROMPTS: Prompt[] = [...FOOD_FAMILY, ...FOOD_AFTER_DARK];
+export const PROMPTS: Prompt[] = [
+  ...FOOD_FAMILY,
+  ...FOOD_AFTER_DARK,
+  ...PLACES,
+  ...PEOPLE,
+  ...SLANG,
+  ...SPORT,
+  ...CARS,
+  ...MUSIC,
+];
 
 export function getDeckCards(category: string): Prompt[] {
   return PROMPTS.filter((p) => p.category === category);

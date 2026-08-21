@@ -1,13 +1,23 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/atoms/Icon';
-import { getPlayableCategories, getPromptDeck } from '../data/prompts';
+import { LottieIcon } from '../components/atoms/LottieIcon';
+import { PaperButton } from '../components/atoms/PaperButton';
+import { DECK_CATEGORIES, getPlayableCategories, getPromptDeck, isDeckReady } from '../data/prompts';
 import { useGameStore } from '../state/gameStore';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../state/gameTypes';
-import { bankTheme } from '../theme/bankTheme';
-import { typography } from '../theme/typography';
+import { fonts, paper } from '../theme/paper';
+
+const DECK_TINT: Record<string, string> = {
+  Food: paper.red,
+  Places: paper.blue,
+  People: paper.yellow,
+  Slang: paper.green,
+  Sport: paper.blue,
+  Cars: paper.red,
+  Music: paper.green,
+};
 
 function Stepper({
   value,
@@ -26,31 +36,30 @@ function Stepper({
     <View style={styles.stepperRow}>
       <Pressable
         onPress={() => onChange(Math.max(min, value - step))}
-        style={({ pressed }) => [styles.stepperBtn, pressed ? styles.stepperBtnPressed : null]}
+        style={({ pressed }) => [styles.stepperBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel="Decrease"
       >
-        <Icon name="minus" size={18} color="#FFFFFF" solid />
+        <Icon name="minus" size={16} color={paper.white} solid />
       </Pressable>
-      <View style={styles.stepperValueWrap}>
-        <Text style={styles.stepperValue}>{value}</Text>
-      </View>
+      <Text style={styles.stepperValue}>{value}</Text>
       <Pressable
         onPress={() => onChange(Math.min(max, value + step))}
-        style={({ pressed }) => [styles.stepperBtn, pressed ? styles.stepperBtnPressed : null]}
+        style={({ pressed }) => [styles.stepperBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel="Increase"
       >
-        <Icon name="plus" size={18} color="#FFFFFF" solid />
+        <Icon name="plus" size={16} color={paper.white} solid />
       </Pressable>
     </View>
   );
 }
 
-export function SetupScreen() {
+export function SetupScreen({ onBack }: { onBack?: () => void }) {
   const { state, dispatch } = useGameStore();
-  const categories = useMemo(() => getPlayableCategories(), []);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(categories[0] ?? null);
+  const insets = useSafeAreaInsets();
+  const playable = useMemo(() => getPlayableCategories(), []);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(playable[0] ?? null);
 
   const namesReady = state.players.every((p) => p.name.trim().length > 0);
   const canStart = Boolean(selectedCategory) && namesReady && state.players.length >= MIN_PLAYERS;
@@ -68,43 +77,56 @@ export function SetupScreen() {
 
   return (
     <View style={styles.shell}>
-      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeTop}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.topLogo, typography.headline]}>IZIT!</Text>
-          <Text style={styles.heroTag}>Heads Up. Phone on the forehead. Partner clues. Tilt to score.</Text>
-
-          <View style={styles.playWrap}>
-            <Pressable
-              disabled={!canStart}
-              onPress={() => {
-                if (!selectedCategory) return;
-                dispatch({
-                  type: 'START_NIGHT',
-                  category: selectedCategory,
-                  promptDeck: getPromptDeck(selectedCategory, state.rating),
-                });
-              }}
-              style={({ pressed }) => [
-                styles.playOuter,
-                !canStart && styles.playDisabled,
-                pressed && canStart && { transform: [{ scale: 0.98 }] },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Start game"
-            >
-              <LinearGradient
-                colors={bankTheme.ctaGradient as [string, string]}
-                style={styles.playGrad}
-                start={{ x: 0.2, y: 0 }}
-                end={{ x: 0.8, y: 1 }}
-              >
-                <Icon name="play" size={28} color={bankTheme.onPrimary} solid style={styles.playIcon} />
-                <Text style={styles.playWord}>PLAY</Text>
-              </LinearGradient>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <View style={styles.topRow}>
+          {onBack ? (
+            <Pressable onPress={onBack} style={styles.iconHit} accessibilityRole="button" accessibilityLabel="Back">
+              <Icon name="arrow-left" size={18} color={paper.ink} solid />
             </Pressable>
+          ) : (
+            <View style={styles.iconHit} />
+          )}
+          <View style={styles.brandRow}>
+            <Text style={styles.wordmark}>Izit</Text>
+            <LottieIcon name="trophy" size={32} />
           </View>
+          <View style={styles.iconHit} />
+        </View>
 
-          <View style={styles.section}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: 120 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.intro}>
+            Challenge the room. One phone, pairs of two, forehead out. Only your partner clues.
+          </Text>
+
+          <Text style={styles.sectionLabel}>Popular deck</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.deckRow}>
+            {DECK_CATEGORIES.map((category) => {
+              const ready = isDeckReady(category);
+              const active = selectedCategory === category;
+              return (
+                <Pressable
+                  key={category}
+                  disabled={!ready}
+                  onPress={() => setSelectedCategory(category)}
+                  style={[
+                    styles.deckCard,
+                    { backgroundColor: DECK_TINT[category] ?? paper.red },
+                    !ready && styles.deckLocked,
+                    active && ready && styles.deckActive,
+                  ]}
+                >
+                  <Text style={styles.deckTag}>{ready ? 'Ready' : 'Soon'}</Text>
+                  <Text style={styles.deckTitle}>{category}</Text>
+                  {ready ? <LottieIcon name="spark" size={54} /> : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.card}>
             <Text style={styles.sectionLabel}>Room</Text>
             <View style={styles.ratingRow}>
               {(['family', 'afterDark'] as const).map((rating) => {
@@ -122,38 +144,10 @@ export function SetupScreen() {
                 );
               })}
             </View>
-            <Text style={styles.helpText}>
-              Family is clean. After Dark adds the drinking cards on top.
-            </Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Category</Text>
-            <View style={styles.categoryWrap}>
-              {categories.map((category) => {
-                const isActive = selectedCategory === category;
-                return (
-                  <Pressable
-                    key={category}
-                    onPress={() => setSelectedCategory(category)}
-                    style={({ pressed }) => [
-                      styles.categoryPill,
-                      isActive ? styles.categoryPillActive : null,
-                      pressed ? styles.categoryPillPressed : null,
-                    ]}
-                  >
-                    <Text style={[styles.categoryPillText, isActive ? styles.categoryPillTextActive : null]}>
-                      {category}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={styles.helpText}>More decks show up once they have enough cards.</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Players (pairs of two)</Text>
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Players</Text>
             <Stepper
               value={state.players.length}
               min={MIN_PLAYERS}
@@ -161,39 +155,51 @@ export function SetupScreen() {
               step={2}
               onChange={(count) => dispatch({ type: 'SET_PLAYER_COUNT', count })}
             />
-            <View style={styles.playerInputs}>
-              {state.players.map((player, index) => (
-                <View key={player.id} style={styles.playerRow}>
-                  <Text style={styles.playerLabel}>{index + 1}</Text>
-                  <TextInput
-                    value={player.name}
-                    onChangeText={(name) =>
-                      dispatch({ type: 'UPDATE_PLAYER_NAME', playerIndex: index, name })
-                    }
-                    style={styles.input}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    placeholder={`Player ${index + 1}`}
-                    placeholderTextColor={bankTheme.onSurfaceVariant}
-                  />
-                </View>
-              ))}
-            </View>
+            {state.players.map((player, index) => (
+              <View key={player.id} style={styles.playerRow}>
+                <Text style={styles.playerLabel}>{index + 1}</Text>
+                <TextInput
+                  value={player.name}
+                  onChangeText={(name) => dispatch({ type: 'UPDATE_PLAYER_NAME', playerIndex: index, name })}
+                  style={styles.input}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  placeholder={`Player ${index + 1}`}
+                  placeholderTextColor={paper.inkSoft}
+                />
+              </View>
+            ))}
           </View>
 
-          <View style={styles.section}>
+          <View style={styles.card}>
             <Text style={styles.sectionLabel}>Pairs</Text>
             {teams.map((team, idx) => (
-              <Text key={`team-${idx}`} style={styles.pairLine}>
-                Team {idx + 1}: {team.a} + {team.b}
-              </Text>
+              <View key={`team-${idx}`} style={styles.pairRow}>
+                <View style={[styles.pairDot, { backgroundColor: idx % 2 === 0 ? paper.yellow : paper.blue }]} />
+                <Text style={styles.pairLine}>
+                  {team.a} + {team.b}
+                </Text>
+              </View>
             ))}
-            <Text style={styles.helpText}>
-              Only your partner clues. Rename people to change who sits together. 1 with 2, 3 with 4.
-            </Text>
+            <Text style={styles.help}>1 with 2, 3 with 4. Rename people to sit together.</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <View style={[styles.bottomDock, { bottom: Math.max(insets.bottom, 16) }]}>
+        <PaperButton
+          title="Play"
+          disabled={!canStart}
+          onPress={() => {
+            if (!selectedCategory) return;
+            dispatch({
+              type: 'START_NIGHT',
+              category: selectedCategory,
+              promptDeck: getPromptDeck(selectedCategory, state.rating),
+            });
+          }}
+        />
+      </View>
     </View>
   );
 }
@@ -201,141 +207,90 @@ export function SetupScreen() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: bankTheme.background,
+    backgroundColor: paper.cream,
   },
-  safeTop: {
+  safe: {
     flex: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  iconHit: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  wordmark: {
+    fontFamily: fonts.display,
+    fontSize: 34,
+    color: paper.ink,
   },
   scroll: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
-    flexGrow: 1,
   },
-  topLogo: {
-    fontSize: 22,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    color: bankTheme.primary,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  heroTag: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: bankTheme.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-  },
-  playWrap: {
-    alignItems: 'center',
-    marginVertical: 18,
-  },
-  playOuter: {
-    shadowColor: bankTheme.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 28,
-    elevation: 14,
-  },
-  playDisabled: {
-    opacity: 0.5,
-  },
-  playGrad: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.65)',
-  },
-  playIcon: {
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  playWord: {
-    color: bankTheme.onPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  section: {
-    backgroundColor: bankTheme.surfaceContainerLowest,
-    borderRadius: bankTheme.radii.lg,
-    padding: bankTheme.spacing.card,
-    marginBottom: 14,
+  intro: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: paper.inkSoft,
+    lineHeight: 22,
+    marginBottom: 18,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: bankTheme.onSurface,
-    marginBottom: 10,
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 14,
-  },
-  stepperBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2563eb',
-  },
-  stepperBtnPressed: {
-    transform: [{ scale: 0.98 }],
-    backgroundColor: '#1d4ed8',
-  },
-  stepperValueWrap: {
-    minWidth: 78,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: bankTheme.onSurface,
-  },
-  helpText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: bankTheme.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  categoryWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  categoryPill: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: bankTheme.surfaceContainerLow,
-  },
-  categoryPillActive: {
-    backgroundColor: bankTheme.primary,
-  },
-  categoryPillPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  categoryPillText: {
+    fontFamily: fonts.label,
     fontSize: 13,
-    fontWeight: '700',
-    color: bankTheme.onSurface,
+    color: paper.ink,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
-  categoryPillTextActive: {
-    color: bankTheme.onPrimary,
+  deckRow: {
+    gap: 12,
+    paddingBottom: 6,
+    marginBottom: 16,
+  },
+  deckCard: {
+    width: 168,
+    height: 168,
+    borderRadius: paper.radii.card,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  deckLocked: {
+    opacity: 0.38,
+  },
+  deckActive: {
+    transform: [{ scale: 1.02 }],
+  },
+  deckTag: {
+    fontFamily: fonts.label,
+    fontSize: 11,
+    color: paper.white,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  deckTitle: {
+    fontFamily: fonts.displayUp,
+    fontSize: 26,
+    color: paper.white,
+  },
+  card: {
+    backgroundColor: paper.card,
+    borderRadius: paper.radii.card,
+    padding: 16,
+    marginBottom: 12,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -343,54 +298,103 @@ const styles = StyleSheet.create({
   },
   ratingPill: {
     flex: 1,
-    borderRadius: 999,
+    borderRadius: paper.radii.pill,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: bankTheme.surfaceContainerLow,
+    backgroundColor: paper.creamDeep,
   },
   ratingPillActive: {
-    backgroundColor: bankTheme.primary,
+    backgroundColor: paper.ink,
   },
   ratingText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: bankTheme.onSurface,
+    fontFamily: fonts.label,
+    fontSize: 13,
+    color: paper.ink,
   },
   ratingTextActive: {
-    color: bankTheme.onPrimary,
+    color: paper.white,
   },
-  playerInputs: {
-    gap: 10,
-    marginTop: 6,
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 12,
+  },
+  stepperBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: paper.ink,
+  },
+  stepperValue: {
+    fontFamily: fonts.displayUp,
+    fontSize: 28,
+    color: paper.ink,
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }],
   },
   playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginBottom: 8,
   },
   playerLabel: {
-    width: 24,
+    width: 22,
+    fontFamily: fonts.label,
+    fontSize: 13,
+    color: paper.inkSoft,
     textAlign: 'right',
-    fontSize: 14,
-    fontWeight: '700',
-    color: bankTheme.onSurface,
   },
   input: {
     flex: 1,
-    backgroundColor: bankTheme.surfaceContainerLow,
+    backgroundColor: paper.cream,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: bankTheme.radii.md,
-    borderWidth: 1,
-    borderColor: bankTheme.outlineVariant,
-    fontSize: 14,
-    fontWeight: '400',
-    color: bankTheme.onSurface,
+    borderRadius: paper.radii.sm,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: paper.ink,
+  },
+  pairRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  pairDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   pairLine: {
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '700',
-    color: bankTheme.onSurface,
-    marginBottom: 6,
+    color: paper.ink,
+  },
+  help: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: paper.inkSoft,
+    marginTop: 4,
+  },
+  bottomDock: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 28,
+    backgroundColor: paper.ink,
+    borderRadius: paper.radii.pill,
+    shadowColor: paper.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
 });

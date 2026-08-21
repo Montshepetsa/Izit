@@ -1,11 +1,13 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Accelerometer } from 'expo-sensors';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CountdownTimer } from '../components/atoms/CountdownTimer';
 import { Icon } from '../components/atoms/Icon';
+import { LottieIcon } from '../components/atoms/LottieIcon';
+import { PaperButton } from '../components/atoms/PaperButton';
 import { useForeheadTilt } from '../hooks/useForeheadTilt';
+import { useGameSounds } from '../hooks/useGameSounds';
 import { usePlayOrientation } from '../hooks/usePlayOrientation';
 import {
   getCurrentPrompt,
@@ -20,41 +22,7 @@ import {
 } from '../state/gameSelectors';
 import { useGameStore } from '../state/gameStore';
 import type { GameState, Phase } from '../state/gameTypes';
-import { light, neon, radii } from '../theme/izitTheme';
-
-function NeonButton({
-  title,
-  onPress,
-  variant,
-}: {
-  title: string;
-  onPress: () => void;
-  variant: 'gradient' | 'outline';
-}) {
-  if (variant === 'gradient') {
-    return (
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.ctOuter, pressed && { opacity: 0.92 }]}>
-        <LinearGradient
-          colors={[light.gold, light.goldDeep]}
-          start={{ x: 0.2, y: 0 }}
-          end={{ x: 0.8, y: 1 }}
-          style={styles.ctGradient}
-        >
-          <Text style={styles.ctText}>{title}</Text>
-        </LinearGradient>
-      </Pressable>
-    );
-  }
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.outlineBtn, pressed && { opacity: 0.88 }]}
-    >
-      <Text style={styles.outlineBtnText}>{title}</Text>
-    </Pressable>
-  );
-}
+import { fonts, paper } from '../theme/paper';
 
 function nightHasProgress(state: GameState): boolean {
   return state.teams.some((team) => team.score > 0) || state.phase !== 'ready';
@@ -85,9 +53,12 @@ function PlayNav({
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <Icon name="arrow-left" size={18} color={neon.text} solid />
+        <Icon name="arrow-left" size={18} color={paper.ink} solid />
       </Pressable>
-      <Text style={styles.navLogo}>IZIT!</Text>
+      <View style={styles.navBrand}>
+        <Text style={styles.navLogo}>Izit</Text>
+        <LottieIcon name="trophy" size={28} />
+      </View>
       {phase === 'winner' ? (
         <View style={styles.navBtn} />
       ) : (
@@ -105,9 +76,19 @@ function PlayNav({
   );
 }
 
-function CountdownStage({ onDone }: { onDone: () => void }) {
+function CountdownStage({ onDone, onBeat }: { onDone: () => void; onBeat: (n: number) => void }) {
   const [n, setN] = useState(3);
   const doneRef = React.useRef(false);
+  const scale = useRef(new Animated.Value(0.55)).current;
+
+  useEffect(() => {
+    onBeat(n);
+  }, [n, onBeat]);
+
+  useEffect(() => {
+    scale.setValue(0.55);
+    Animated.spring(scale, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }).start();
+  }, [n, scale]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -125,26 +106,60 @@ function CountdownStage({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={styles.centerFill}>
-      <Text style={styles.countdownNum}>{n}</Text>
+      <Animated.Text style={[styles.countdownNum, { transform: [{ scale }] }]}>{n}</Animated.Text>
       <Text style={styles.hintLine}>Put it on your forehead</Text>
     </View>
+  );
+}
+
+function SecretWord({ text, size }: { text: string; size: number }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const prev = useRef(text);
+
+  useEffect(() => {
+    if (prev.current === text) return;
+    prev.current = text;
+    opacity.setValue(0);
+    scale.setValue(0.92);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 7, useNativeDriver: true }),
+    ]).start();
+  }, [opacity, scale, text]);
+
+  return (
+    <Animated.Text style={[styles.secretWord, { fontSize: size, opacity, transform: [{ scale }] }]}>
+      {text}
+    </Animated.Text>
   );
 }
 
 export function PlayScreen() {
   const { state, dispatch } = useGameStore();
   usePlayOrientation(state.phase);
+  const { playCorrect, playSkip, playCountdownTick } = useGameSounds();
+  const [flash, setFlash] = useState<'correct' | 'skip' | null>(null);
 
   const guesser = getGuesser(state);
   const partner = getPartner(state);
   const prompt = getCurrentPrompt(state);
   const last = isLastGuesserOfNight(state);
   const upcoming = nextGuesser(state);
+  const winners = state.phase === 'winner' ? getWinningTeams(state) : [];
 
   const handleTick = useCallback(() => dispatch({ type: 'TIMER_TICK' }), [dispatch]);
   const handleTimeUp = useCallback(() => dispatch({ type: 'TIME_UP' }), [dispatch]);
-  const handleCorrect = useCallback(() => dispatch({ type: 'MARK_CORRECT' }), [dispatch]);
-  const handleSkip = useCallback(() => dispatch({ type: 'MARK_SKIP' }), [dispatch]);
+  const handleCorrect = useCallback(() => {
+    playCorrect();
+    setFlash('correct');
+    dispatch({ type: 'MARK_CORRECT' });
+  }, [dispatch, playCorrect]);
+  const handleSkip = useCallback(() => {
+    playSkip();
+    setFlash('skip');
+    dispatch({ type: 'MARK_SKIP' });
+  }, [dispatch, playSkip]);
   const handleCountdownDone = useCallback(() => dispatch({ type: 'COUNTDOWN_DONE' }), [dispatch]);
   const endSession = useCallback(() => dispatch({ type: 'END_SESSION' }), [dispatch]);
 
@@ -175,7 +190,14 @@ export function PlayScreen() {
     void Accelerometer.requestPermissionsAsync();
   }, [state.phase]);
 
+  useEffect(() => {
+    if (!flash) return undefined;
+    const t = setTimeout(() => setFlash(null), 480);
+    return () => clearTimeout(t);
+  }, [flash]);
+
   const wordSize = !prompt ? 48 : prompt.answer.length > 18 ? 36 : prompt.answer.length > 10 ? 48 : 64;
+  const ranked = [...state.teams].sort((a, b) => b.score - a.score);
 
   return (
     <View style={styles.outer}>
@@ -184,20 +206,21 @@ export function PlayScreen() {
 
         {state.phase === 'ready' ? (
           <View style={styles.centerFill}>
-            <Text style={styles.kicker}>YOU'RE UP</Text>
+            <LottieIcon name="spark" size={92} />
+            <Text style={styles.kicker}>You're up</Text>
             <Text style={styles.heroName}>{guesser?.name ?? 'Player'}</Text>
             <Text style={styles.readyBody}>
               Hold the phone to your forehead, screen facing {partner?.name ?? 'your partner'}.
             </Text>
             <Text style={styles.readyBody}>
-              {partner?.name ?? 'Your partner'} gives the clues. You tilt down for correct, up to skip.
+              {partner?.name ?? 'Your partner'} gives the clues. Tilt down for correct, up to skip.
             </Text>
-            <NeonButton title="I'M READY" onPress={() => dispatch({ type: 'START_COUNTDOWN' })} variant="gradient" />
+            <PaperButton title="I'm ready" onPress={() => dispatch({ type: 'START_COUNTDOWN' })} />
           </View>
         ) : null}
 
         {state.phase === 'countdown' ? (
-          <CountdownStage onDone={handleCountdownDone} />
+          <CountdownStage onDone={handleCountdownDone} onBeat={playCountdownTick} />
         ) : null}
 
         {state.phase === 'playing' ? (
@@ -211,21 +234,26 @@ export function PlayScreen() {
                 totalSeconds={state.roundDurationSec}
               />
               <View>
-                <Text style={styles.miniStat}>CORRECT {getTurnCorrectCount(state)}</Text>
-                <Text style={styles.miniStatMuted}>SKIP {getTurnSkipCount(state)}</Text>
+                <Text style={styles.miniStat}>Correct {getTurnCorrectCount(state)}</Text>
+                <Text style={styles.miniStatMuted}>Skip {getTurnSkipCount(state)}</Text>
               </View>
             </View>
-            <Text style={styles.secretLabel}>LOOK THIS WAY</Text>
-            <Text style={[styles.secretWord, { fontSize: wordSize }]}>{prompt?.answer ?? '—'}</Text>
+            <Text style={styles.secretLabel}>Look this way</Text>
+            <SecretWord text={prompt?.answer ?? '—'} size={wordSize} />
             <Text style={styles.hintLine}>Tilt DOWN correct. Tilt UP skip.</Text>
+            {flash ? (
+              <View pointerEvents="none" style={styles.flash}>
+                <LottieIcon name={flash === 'correct' ? 'check' : 'skip'} size={140} loop={false} />
+              </View>
+            ) : null}
             <View style={styles.fallbackRow}>
               <Pressable onPress={handleSkip} style={styles.fallbackBtn} accessibilityLabel="Skip">
-                <Icon name="arrow-up" size={12} color={neon.textMuted} solid />
-                <Text style={styles.fallbackText}>SKIP</Text>
+                <Icon name="arrow-up" size={12} color={paper.inkSoft} solid />
+                <Text style={styles.fallbackText}>Skip</Text>
               </Pressable>
               <Pressable onPress={handleCorrect} style={styles.fallbackBtn} accessibilityLabel="Correct">
-                <Icon name="arrow-down" size={12} color={neon.textMuted} solid />
-                <Text style={styles.fallbackText}>CORRECT</Text>
+                <Icon name="arrow-down" size={12} color={paper.inkSoft} solid />
+                <Text style={styles.fallbackText}>Correct</Text>
               </Pressable>
             </View>
           </View>
@@ -233,10 +261,13 @@ export function PlayScreen() {
 
         {state.phase === 'turnRecap' ? (
           <ScrollView contentContainerStyle={styles.summaryBlock} showsVerticalScrollIndicator={false}>
-            <Text style={styles.summaryHero}>TIME'S UP</Text>
-            <Text style={styles.summarySub}>{guesser?.name ?? 'Player'} scored {getTurnCorrectCount(state)}</Text>
+            <LottieIcon name="trophy" size={56} />
+            <Text style={styles.summaryHero}>Time's up</Text>
+            <Text style={styles.summarySub}>
+              {guesser?.name ?? 'Player'} scored {getTurnCorrectCount(state)}
+            </Text>
             <View style={styles.pointsPill}>
-              <Text style={styles.pointsPillLabel}>THIS PAIR</Text>
+              <Text style={styles.pointsPillLabel}>This pair</Text>
               <Text style={styles.pointsPillValue}>{getCurrentTeamScore(state)}</Text>
             </View>
             <View style={styles.listCard}>
@@ -250,20 +281,15 @@ export function PlayScreen() {
                   >
                     <Text style={styles.listName}>{row.prompt.answer}</Text>
                     <Text style={[styles.listPoints, row.result === 'skip' && styles.listSkip]}>
-                      {row.result === 'correct' ? 'YES' : 'SKIP'}
+                      {row.result === 'correct' ? 'Yes' : 'Skip'}
                     </Text>
                   </View>
                 ))
               )}
             </View>
-            <NeonButton
-              title={
-                last
-                  ? 'SEE THE WINNER'
-                  : `PASS TO ${upcoming?.name.toUpperCase() ?? 'NEXT'}`
-              }
+            <PaperButton
+              title={last ? 'See the winner' : `Pass to ${upcoming?.name ?? 'next'}`}
               onPress={() => dispatch({ type: 'ADVANCE_AFTER_RECAP' })}
-              variant="gradient"
             />
             <Pressable onPress={handleEndGame} style={styles.ghostBtn} accessibilityRole="button">
               <Text style={styles.ghostBtnText}>End game</Text>
@@ -273,31 +299,31 @@ export function PlayScreen() {
 
         {state.phase === 'winner' ? (
           <ScrollView contentContainerStyle={styles.summaryBlock} showsVerticalScrollIndicator={false}>
-            <Text style={styles.summaryHero}>
-              {getWinningTeams(state).length > 1 ? 'DRAW' : 'WINNERS'}
-            </Text>
-            {getWinningTeams(state).map((team) => (
+            <LottieIcon name="trophy" size={72} />
+            <Text style={styles.summaryHero}>{winners.length > 1 ? 'Draw' : 'Winners'}</Text>
+            {winners.map((team) => (
               <Text key={team.id} style={styles.winnerNames}>
                 {teamLabel(state, team)}
               </Text>
             ))}
-            <View style={styles.listCard}>
-              {state.teams.map((team, idx) => (
-                <View
-                  key={team.id}
-                  style={[styles.listRow, idx === state.teams.length - 1 && styles.listRowLast]}
-                >
-                  <Text style={styles.listName}>{teamLabel(state, team)}</Text>
-                  <Text style={styles.listPoints}>{team.score}</Text>
+            <View style={styles.podium}>
+              {ranked.map((team, idx) => (
+                <View key={team.id} style={styles.podiumItem}>
+                  <View
+                    style={[
+                      styles.avatar,
+                      { backgroundColor: idx === 0 ? paper.yellow : idx === 1 ? paper.blue : paper.red },
+                    ]}
+                  >
+                    <Text style={styles.avatarText}>{idx + 1}</Text>
+                  </View>
+                  <Text style={styles.podiumName}>{teamLabel(state, team)}</Text>
+                  <Text style={styles.podiumScore}>{team.score}</Text>
                 </View>
               ))}
             </View>
-            <NeonButton
-              title="PLAY ANOTHER ROUND"
-              onPress={() => dispatch({ type: 'PLAY_ANOTHER_ROUND' })}
-              variant="gradient"
-            />
-            <NeonButton title="CHANGE CATEGORY" onPress={() => dispatch({ type: 'END_SESSION' })} variant="outline" />
+            <PaperButton title="Play another round" onPress={() => dispatch({ type: 'PLAY_ANOTHER_ROUND' })} />
+            <PaperButton title="Change category" onPress={() => dispatch({ type: 'END_SESSION' })} variant="ghost" />
           </ScrollView>
         ) : null}
       </SafeAreaView>
@@ -312,7 +338,7 @@ function getCurrentTeamScore(state: Parameters<typeof getTurnCorrectCount>[0]): 
 const styles = StyleSheet.create({
   outer: {
     flex: 1,
-    backgroundColor: neon.bg,
+    backgroundColor: paper.cream,
   },
   safeArea: {
     flex: 1,
@@ -331,22 +357,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  navBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   navLogo: {
-    fontSize: 18,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    color: neon.magenta,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: paper.ink,
   },
   navEnd: {
+    fontFamily: fonts.label,
     fontSize: 14,
-    fontWeight: '800',
-    color: neon.danger,
+    color: paper.danger,
   },
   centerFill: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: 14,
     paddingHorizontal: 12,
   },
   playFill: {
@@ -364,58 +394,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   kicker: {
+    fontFamily: fonts.label,
     fontSize: 13,
-    fontWeight: '800',
-    color: neon.cyan,
-    letterSpacing: 3,
+    color: paper.inkSoft,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   heroName: {
-    fontSize: 44,
-    fontWeight: '900',
-    color: neon.text,
+    fontFamily: fonts.display,
+    fontSize: 48,
+    color: paper.ink,
     textAlign: 'center',
   },
   readyBody: {
+    fontFamily: fonts.body,
     fontSize: 16,
-    fontWeight: '600',
-    color: neon.textSoft,
+    color: paper.inkSoft,
     textAlign: 'center',
     lineHeight: 24,
   },
   countdownNum: {
-    fontSize: 120,
-    fontWeight: '900',
-    color: light.gold,
+    fontFamily: fonts.display,
+    fontSize: 128,
+    color: paper.ink,
   },
   secretLabel: {
+    fontFamily: fonts.label,
     fontSize: 12,
-    fontWeight: '900',
-    color: neon.textMuted,
-    letterSpacing: 2,
+    color: paper.inkSoft,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
     marginBottom: 8,
   },
   secretWord: {
-    fontWeight: '900',
-    color: neon.text,
+    fontFamily: fonts.displayUp,
+    color: paper.ink,
     textAlign: 'center',
     marginBottom: 10,
   },
   hintLine: {
+    fontFamily: fonts.bodyBold,
     fontSize: 14,
-    fontWeight: '600',
-    color: neon.textSoft,
+    color: paper.inkSoft,
     textAlign: 'center',
   },
+  flash: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.42,
+  },
   miniStat: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: neon.magenta,
+    fontFamily: fonts.label,
+    fontSize: 15,
+    color: paper.red,
     textAlign: 'right',
   },
   miniStatMuted: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: neon.textMuted,
+    fontFamily: fonts.label,
+    fontSize: 13,
+    color: paper.inkSoft,
     textAlign: 'right',
     marginTop: 4,
   },
@@ -433,56 +471,22 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    opacity: 0.55,
+    opacity: 0.7,
   },
   fallbackText: {
-    color: neon.textMuted,
+    color: paper.inkSoft,
+    fontFamily: fonts.label,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  ctOuter: {
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-    minHeight: 62,
-    alignSelf: 'stretch',
-  },
-  ctGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctText: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#320B4E',
-    letterSpacing: 1.1,
-  },
-  outlineBtn: {
-    borderRadius: radii.pill,
-    borderWidth: 2,
-    borderColor: light.oliveTitle,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    backgroundColor: neon.bgCardLift,
-    minHeight: 62,
-    alignSelf: 'stretch',
-  },
-  outlineBtnText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: light.oliveTitle,
-    letterSpacing: 1.1,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   ghostBtn: {
     paddingVertical: 14,
   },
   ghostBtnText: {
+    fontFamily: fonts.label,
     fontSize: 13,
-    fontWeight: '800',
-    color: neon.textMuted,
+    color: paper.inkSoft,
   },
   summaryBlock: {
     alignItems: 'center',
@@ -491,48 +495,48 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   summaryHero: {
+    fontFamily: fonts.display,
     fontSize: 40,
-    fontWeight: '900',
-    fontStyle: 'italic',
-    color: light.gold,
+    color: paper.ink,
     textAlign: 'center',
   },
   summarySub: {
+    fontFamily: fonts.bodyBold,
     fontSize: 16,
-    fontWeight: '700',
-    color: neon.cyan,
+    color: paper.inkSoft,
     textAlign: 'center',
   },
   winnerNames: {
+    fontFamily: fonts.displayUp,
     fontSize: 22,
-    fontWeight: '800',
-    color: neon.text,
+    color: paper.ink,
     textAlign: 'center',
   },
   pointsPill: {
     width: '100%',
-    backgroundColor: neon.bgCardLift,
-    borderRadius: radii.card,
+    backgroundColor: paper.card,
+    borderRadius: paper.radii.card,
     paddingVertical: 18,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   pointsPillLabel: {
+    fontFamily: fonts.label,
     fontSize: 11,
-    fontWeight: '800',
-    color: neon.textMuted,
-    letterSpacing: 2,
+    color: paper.inkSoft,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
     marginBottom: 6,
   },
   pointsPillValue: {
+    fontFamily: fonts.display,
     fontSize: 40,
-    fontWeight: '900',
-    color: neon.text,
+    color: paper.ink,
   },
   listCard: {
     width: '100%',
-    backgroundColor: neon.bgCardLift,
-    borderRadius: radii.card,
+    backgroundColor: paper.card,
+    borderRadius: paper.radii.card,
     padding: 16,
   },
   listRow: {
@@ -540,24 +544,60 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: paper.creamDeep,
     gap: 12,
   },
   listRowLast: {
     borderBottomWidth: 0,
   },
   listName: {
+    fontFamily: fonts.bodyBold,
     fontSize: 15,
-    fontWeight: '700',
-    color: neon.text,
+    color: paper.ink,
     flex: 1,
   },
   listPoints: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: neon.cyan,
+    fontFamily: fonts.label,
+    fontSize: 14,
+    color: paper.green,
   },
   listSkip: {
-    color: neon.textMuted,
+    color: paper.inkSoft,
+  },
+  podium: {
+    width: '100%',
+    gap: 10,
+  },
+  podiumItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: paper.card,
+    borderRadius: paper.radii.pill,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: fonts.label,
+    fontSize: 16,
+    color: paper.ink,
+  },
+  podiumName: {
+    flex: 1,
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: paper.ink,
+  },
+  podiumScore: {
+    fontFamily: fonts.displayUp,
+    fontSize: 20,
+    color: paper.ink,
   },
 });
