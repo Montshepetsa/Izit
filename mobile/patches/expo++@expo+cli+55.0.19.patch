@@ -1,0 +1,15 @@
+diff --git a/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/ios/ensureSimulatorAppRunning.js b/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/ios/ensureSimulatorAppRunning.js
+index 31296bc..ec39ec0 100644
+--- a/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/ios/ensureSimulatorAppRunning.js
++++ b/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/ios/ensureSimulatorAppRunning.js
+@@ -103,6 +103,10 @@ async function isSimulatorAppRunningAsync() {
+         if (error.message.includes('Application isn’t running')) {
+             return false;
+         }
++        if (error.message.includes('System Events') || error.message.includes('Not authorized') || error.message.includes('not permitted') || error.message.includes('Apple events')) {
++            _log.warn(`Skipping iOS Simulator process check because macOS blocked System Events automation. Continuing launch flow...`);
++            return true;
++        }
+         throw error;
+     }
+     return true;

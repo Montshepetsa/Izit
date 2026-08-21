@@ -1,2 +1,19 @@
 # Izit
-zit a game? Izit a vibe check? Izit another fun time? Izit!! is the ultimate Mzansi-themed charades and party game. Built for the culture, by the culture. It’s not just about acting; it’s about proving you’ve got the local flavor.
+
+Izit a game? Izit a vibe check? Izit another fun time? **Izit!** is a Mzansi Heads Up party game. One phone, pairs of two, forehead, tilt.
+
+## Repo layout
+
+| Path | Description |
+|------|-------------|
+| `mobile/` | Expo / React Native app |
+
+## Quick start
+
+```bash
+cd mobile
+npm install
+npm start
+```
+
+See [mobile/README.md](mobile/README.md) for play, test, and ship notes.
