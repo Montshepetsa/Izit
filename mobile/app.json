@@ -13,7 +13,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.izit.app",
+      "bundleIdentifier": "com.mokgokong.izit",
+      "appleTeamId": "Y6HV6L7ML5",
       "infoPlist": {
         "NSMotionUsageDescription": "Izit uses the accelerometer so you can tilt the phone to score in Heads Up."
       }

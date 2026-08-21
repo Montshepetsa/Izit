@@ -1,22 +1,43 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/atoms/Icon';
 import { LottieIcon } from '../components/atoms/LottieIcon';
 import { PaperButton } from '../components/atoms/PaperButton';
-import { DECK_CATEGORIES, getPlayableCategories, getPromptDeck, isDeckReady } from '../data/prompts';
+import {
+  DECK_CATEGORIES,
+  getPlayableCategories,
+  getPromptDeck,
+  isDeckReady,
+  type DeckCategory,
+} from '../data/prompts';
 import { useGameStore } from '../state/gameStore';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../state/gameTypes';
 import { fonts, paper } from '../theme/paper';
 
-const DECK_TINT: Record<string, string> = {
+const DECK_TINT: Record<DeckCategory, string> = {
   Food: paper.red,
+  Drinks: paper.yellow,
   Places: paper.blue,
   People: paper.yellow,
   Slang: paper.green,
   Sport: paper.blue,
   Cars: paper.red,
-  Music: paper.green,
+  Artists: paper.green,
+  Songs: paper.blue,
+};
+
+const DECK_IMAGES: Record<DeckCategory, number> = {
+  Food: require('../../assets/decks/food.png'),
+  Drinks: require('../../assets/decks/drinks.png'),
+  Places: require('../../assets/decks/places.png'),
+  People: require('../../assets/decks/people.png'),
+  Slang: require('../../assets/decks/slang.png'),
+  Sport: require('../../assets/decks/sport.png'),
+  Cars: require('../../assets/decks/cars.png'),
+  Artists: require('../../assets/decks/artists.png'),
+  Songs: require('../../assets/decks/songs.png'),
 };
 
 function Stepper({
@@ -38,7 +59,7 @@ function Stepper({
         onPress={() => onChange(Math.max(min, value - step))}
         style={({ pressed }) => [styles.stepperBtn, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Decrease"
+        accessibilityLabel="Fewer players"
       >
         <Icon name="minus" size={16} color={paper.white} solid />
       </Pressable>
@@ -47,7 +68,7 @@ function Stepper({
         onPress={() => onChange(Math.min(max, value + step))}
         style={({ pressed }) => [styles.stepperBtn, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Increase"
+        accessibilityLabel="More players"
       >
         <Icon name="plus" size={16} color={paper.white} solid />
       </Pressable>
@@ -111,16 +132,32 @@ export function SetupScreen({ onBack }: { onBack?: () => void }) {
                   key={category}
                   disabled={!ready}
                   onPress={() => setSelectedCategory(category)}
+                  accessibilityRole="button"
+                  accessibilityLabel={ready ? `${category}, ready` : `${category}, coming soon`}
+                  accessibilityState={{ disabled: !ready, selected: active && ready }}
                   style={[
                     styles.deckCard,
-                    { backgroundColor: DECK_TINT[category] ?? paper.red },
-                    !ready && styles.deckLocked,
+                    { backgroundColor: DECK_TINT[category] },
                     active && ready && styles.deckActive,
                   ]}
                 >
-                  <Text style={styles.deckTag}>{ready ? 'Ready' : 'Soon'}</Text>
-                  <Text style={styles.deckTitle}>{category}</Text>
-                  {ready ? <LottieIcon name="spark" size={54} /> : null}
+                  <Image
+                    source={DECK_IMAGES[category]}
+                    style={[styles.deckImage, !ready && styles.deckImageMuted]}
+                    resizeMode="cover"
+                    accessible={false}
+                    importantForAccessibility="no"
+                  />
+                  <LinearGradient
+                    colors={['rgba(17,17,17,0.12)', 'rgba(17,17,17,0.28)', 'rgba(17,17,17,0.78)']}
+                    locations={[0, 0.45, 1]}
+                    style={styles.deckScrim}
+                  />
+                  {!ready ? <View pointerEvents="none" style={styles.deckLockedWash} /> : null}
+                  <View pointerEvents="none" style={styles.deckCopy}>
+                    <Text style={styles.deckTag}>{ready ? 'Ready' : 'Soon'}</Text>
+                    <Text style={styles.deckTitle}>{category}</Text>
+                  </View>
                 </Pressable>
               );
             })}
@@ -135,6 +172,8 @@ export function SetupScreen({ onBack }: { onBack?: () => void }) {
                   <Pressable
                     key={rating}
                     onPress={() => dispatch({ type: 'SET_RATING', rating })}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                     style={[styles.ratingPill, active && styles.ratingPillActive]}
                   >
                     <Text style={[styles.ratingText, active && styles.ratingTextActive]}>
@@ -164,6 +203,8 @@ export function SetupScreen({ onBack }: { onBack?: () => void }) {
                   style={styles.input}
                   autoCapitalize="words"
                   autoCorrect={false}
+                  autoComplete="off"
+                  accessibilityLabel={`Player ${index + 1} name`}
                   placeholder={`Player ${index + 1}`}
                   placeholderTextColor={paper.inkSoft}
                 />
@@ -176,7 +217,7 @@ export function SetupScreen({ onBack }: { onBack?: () => void }) {
             {teams.map((team, idx) => (
               <View key={`team-${idx}`} style={styles.pairRow}>
                 <View style={[styles.pairDot, { backgroundColor: idx % 2 === 0 ? paper.yellow : paper.blue }]} />
-                <Text style={styles.pairLine}>
+                <Text style={styles.pairLine} numberOfLines={1}>
                   {team.a} + {team.b}
                 </Text>
               </View>
@@ -261,23 +302,41 @@ const styles = StyleSheet.create({
     width: 168,
     height: 168,
     borderRadius: paper.radii.card,
-    padding: 16,
-    justifyContent: 'space-between',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'transparent',
   },
-  deckLocked: {
-    opacity: 0.38,
+  deckImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  deckImageMuted: {
+    opacity: 0.72,
+  },
+  deckScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  deckLockedWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(243,239,230,0.38)',
   },
   deckActive: {
-    transform: [{ scale: 1.02 }],
+    borderColor: paper.ink,
+  },
+  deckCopy: {
+    flex: 1,
+    padding: 14,
+    justifyContent: 'space-between',
   },
   deckTag: {
     fontFamily: fonts.label,
     fontSize: 11,
     color: paper.white,
-    backgroundColor: 'rgba(0,0,0,0.22)',
+    backgroundColor: 'rgba(17,17,17,0.55)',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -285,6 +344,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.displayUp,
     fontSize: 26,
     color: paper.white,
+    textShadowColor: 'rgba(0,0,0,0.65)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
   card: {
     backgroundColor: paper.card,
@@ -298,9 +360,11 @@ const styles = StyleSheet.create({
   },
   ratingPill: {
     flex: 1,
+    minHeight: 44,
     borderRadius: paper.radii.pill,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: paper.creamDeep,
   },
   ratingPillActive: {
@@ -354,6 +418,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minHeight: 44,
     backgroundColor: paper.cream,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -374,6 +439,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   pairLine: {
+    flex: 1,
     fontFamily: fonts.bodyBold,
     fontSize: 15,
     color: paper.ink,

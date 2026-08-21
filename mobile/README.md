@@ -10,7 +10,7 @@ Mzansi Heads Up on one phone. Built with Expo and React Native.
 4. **Recap** — check the words, add to the pair total, pass inside the pair, then the next pair.
 5. **Winner** — everyone guesses once. Highest pair total wins. Play another round keeps the same pairs.
 
-Decks: Food, Places, People, Slang, Sport, Cars, Music. Family is clean. After Dark adds the drinking cards.
+Decks: Food, Drinks, Places, People, Slang, Sport, Cars, Artists, Songs. Family is clean. After Dark adds the late-night cards.
 
 ## Prerequisites
 

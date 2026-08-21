@@ -72,7 +72,12 @@ export function CountdownTimer({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      <View style={styles.ringCenter} pointerEvents="none">
+      <View
+        style={styles.ringCenter}
+        pointerEvents="none"
+        accessibilityRole="timer"
+        accessibilityLabel={`${safeRemain} seconds left`}
+      >
         <Text style={styles.ringValue}>{safeRemain}</Text>
         <Text style={styles.ringUnit}>sec</Text>
       </View>

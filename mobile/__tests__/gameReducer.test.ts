@@ -32,7 +32,17 @@ function playThroughTurn(state: ReturnType<typeof startNight>, correct = 2, skip
 
 describe('prompts', () => {
   it('ships every named deck at full size', () => {
-    expect(getPlayableCategories()).toEqual(['Food', 'Places', 'People', 'Slang', 'Sport', 'Cars', 'Music']);
+    expect(getPlayableCategories()).toEqual([
+      'Food',
+      'Drinks',
+      'Places',
+      'People',
+      'Slang',
+      'Sport',
+      'Cars',
+      'Artists',
+      'Songs',
+    ]);
     for (const category of getPlayableCategories()) {
       expect(isDeckReady(category)).toBe(true);
       const family = getPromptDeck(category, 'family');
@@ -40,6 +50,8 @@ describe('prompts', () => {
       expect(family.length).toBeGreaterThanOrEqual(MIN_FAMILY_CARDS);
       expect(family.every((p) => p.rating === 'family')).toBe(true);
       expect(afterDark.length - family.length).toBeGreaterThanOrEqual(MIN_AFTER_DARK_CARDS);
+      const answers = afterDark.map((p) => p.answer.toLowerCase());
+      expect(new Set(answers).size).toBe(answers.length);
     }
   });
 });

@@ -39,6 +39,8 @@ export function LandingScreen({ onStart }: { onStart: () => void }) {
               source={require('../../assets/landing-collage.png')}
               style={styles.collage}
               resizeMode="cover"
+              accessible={false}
+              importantForAccessibility="no"
             />
             <LottieIcon name="spark" size={88} style={styles.spark} />
           </Animated.View>

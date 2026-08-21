@@ -208,7 +208,9 @@ export function PlayScreen() {
           <View style={styles.centerFill}>
             <LottieIcon name="spark" size={92} />
             <Text style={styles.kicker}>You're up</Text>
-            <Text style={styles.heroName}>{guesser?.name ?? 'Player'}</Text>
+            <Text style={styles.heroName} numberOfLines={2} adjustsFontSizeToFit>
+              {guesser?.name ?? 'Player'}
+            </Text>
             <Text style={styles.readyBody}>
               Hold the phone to your forehead, screen facing {partner?.name ?? 'your partner'}.
             </Text>
@@ -247,11 +249,23 @@ export function PlayScreen() {
               </View>
             ) : null}
             <View style={styles.fallbackRow}>
-              <Pressable onPress={handleSkip} style={styles.fallbackBtn} accessibilityLabel="Skip">
+              <Pressable
+                onPress={handleSkip}
+                style={styles.fallbackBtn}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip"
+              >
                 <Icon name="arrow-up" size={12} color={paper.inkSoft} solid />
                 <Text style={styles.fallbackText}>Skip</Text>
               </Pressable>
-              <Pressable onPress={handleCorrect} style={styles.fallbackBtn} accessibilityLabel="Correct">
+              <Pressable
+                onPress={handleCorrect}
+                style={styles.fallbackBtn}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Correct"
+              >
                 <Icon name="arrow-down" size={12} color={paper.inkSoft} solid />
                 <Text style={styles.fallbackText}>Correct</Text>
               </Pressable>
@@ -279,7 +293,9 @@ export function PlayScreen() {
                     key={`${row.prompt.id}-${idx}`}
                     style={[styles.listRow, idx === state.turnResults.length - 1 && styles.listRowLast]}
                   >
-                    <Text style={styles.listName}>{row.prompt.answer}</Text>
+                    <Text style={styles.listName} numberOfLines={2}>
+                      {row.prompt.answer}
+                    </Text>
                     <Text style={[styles.listPoints, row.result === 'skip' && styles.listSkip]}>
                       {row.result === 'correct' ? 'Yes' : 'Skip'}
                     </Text>
@@ -291,7 +307,12 @@ export function PlayScreen() {
               title={last ? 'See the winner' : `Pass to ${upcoming?.name ?? 'next'}`}
               onPress={() => dispatch({ type: 'ADVANCE_AFTER_RECAP' })}
             />
-            <Pressable onPress={handleEndGame} style={styles.ghostBtn} accessibilityRole="button">
+            <Pressable
+              onPress={handleEndGame}
+              style={styles.ghostBtn}
+              accessibilityRole="button"
+              accessibilityLabel="End game"
+            >
               <Text style={styles.ghostBtnText}>End game</Text>
             </Pressable>
           </ScrollView>
@@ -302,7 +323,7 @@ export function PlayScreen() {
             <LottieIcon name="trophy" size={72} />
             <Text style={styles.summaryHero}>{winners.length > 1 ? 'Draw' : 'Winners'}</Text>
             {winners.map((team) => (
-              <Text key={team.id} style={styles.winnerNames}>
+              <Text key={team.id} style={styles.winnerNames} numberOfLines={2}>
                 {teamLabel(state, team)}
               </Text>
             ))}
@@ -317,7 +338,9 @@ export function PlayScreen() {
                   >
                     <Text style={styles.avatarText}>{idx + 1}</Text>
                   </View>
-                  <Text style={styles.podiumName}>{teamLabel(state, team)}</Text>
+                  <Text style={styles.podiumName} numberOfLines={1}>
+                    {teamLabel(state, team)}
+                  </Text>
                   <Text style={styles.podiumScore}>{team.score}</Text>
                 </View>
               ))}
@@ -405,6 +428,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     color: paper.ink,
     textAlign: 'center',
+    maxWidth: '100%',
   },
   readyBody: {
     fontFamily: fonts.body,
@@ -431,6 +455,7 @@ const styles = StyleSheet.create({
     color: paper.ink,
     textAlign: 'center',
     marginBottom: 10,
+    paddingHorizontal: 8,
   },
   hintLine: {
     fontFamily: fonts.bodyBold,
@@ -469,8 +494,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    minHeight: 44,
+    minWidth: 72,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     opacity: 0.7,
   },
   fallbackText: {
@@ -481,7 +508,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   ghostBtn: {
+    minHeight: 44,
     paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ghostBtnText: {
     fontFamily: fonts.label,
