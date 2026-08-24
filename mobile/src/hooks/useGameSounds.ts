@@ -1,5 +1,6 @@
 import { createAudioPlayer, preload, setAudioModeAsync } from 'expo-audio';
 import type { AudioPlayer } from 'expo-audio';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef } from 'react';
 
 const PLAYER_OPTS = { keepAudioSessionActive: true, updateInterval: 1000 } as const;
@@ -11,6 +12,7 @@ const sources = {
   tick3: require('../../assets/sounds/tick-3.wav'),
   tick2: require('../../assets/sounds/tick-2.wav'),
   tick1: require('../../assets/sounds/tick-1.wav'),
+  timesUp: require('../../assets/sounds/times-up.wav'),
 } as const;
 
 type SoundName = keyof typeof sources;
@@ -21,6 +23,24 @@ try {
   }
 } catch {
   // Native module missing (tests, first paint). Play still works without audio.
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pulseTimeUpHaptics(): Promise<void> {
+  try {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    await wait(120);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  } catch {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {
+      // Web / simulators without a haptic engine stay silent.
+    }
+  }
 }
 
 function replay(player: AudioPlayer): void {
@@ -42,6 +62,7 @@ export function useGameSounds(): {
   playCorrect: () => void;
   playSkip: () => void;
   playCountdownTick: (n: number) => void;
+  playTimeUp: () => void;
 } {
   const players = useRef<Partial<Record<SoundName, AudioPlayer>>>({});
   const lastAt = useRef<Partial<Record<SoundName, number>>>({});
@@ -114,6 +135,10 @@ export function useGameSounds(): {
     },
     [play]
   );
+  const playTimeUp = useCallback(() => {
+    play('timesUp');
+    void pulseTimeUpHaptics();
+  }, [play]);
 
-  return { playCorrect, playSkip, playCountdownTick };
+  return { playCorrect, playSkip, playCountdownTick, playTimeUp };
 }

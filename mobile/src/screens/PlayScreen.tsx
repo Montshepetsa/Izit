@@ -138,8 +138,9 @@ function SecretWord({ text, size }: { text: string; size: number }) {
 export function PlayScreen() {
   const { state, dispatch } = useGameStore();
   usePlayOrientation(state.phase);
-  const { playCorrect, playSkip, playCountdownTick } = useGameSounds();
+  const { playCorrect, playSkip, playCountdownTick, playTimeUp } = useGameSounds();
   const [flash, setFlash] = useState<'correct' | 'skip' | null>(null);
+  const timeUpSignaled = useRef(false);
 
   const guesser = getGuesser(state);
   const partner = getPartner(state);
@@ -149,7 +150,13 @@ export function PlayScreen() {
   const winners = state.phase === 'winner' ? getWinningTeams(state) : [];
 
   const handleTick = useCallback(() => dispatch({ type: 'TIMER_TICK' }), [dispatch]);
-  const handleTimeUp = useCallback(() => dispatch({ type: 'TIME_UP' }), [dispatch]);
+  const handleTimeUp = useCallback(() => {
+    if (!timeUpSignaled.current) {
+      timeUpSignaled.current = true;
+      playTimeUp();
+    }
+    dispatch({ type: 'TIME_UP' });
+  }, [dispatch, playTimeUp]);
   const handleCorrect = useCallback(() => {
     playCorrect();
     setFlash('correct');
@@ -184,6 +191,10 @@ export function PlayScreen() {
   }, [dispatch, endSession, state]);
 
   useForeheadTilt(state.phase === 'playing', handleCorrect, handleSkip);
+
+  useEffect(() => {
+    if (state.phase === 'playing') timeUpSignaled.current = false;
+  }, [state.phase]);
 
   useEffect(() => {
     if (state.phase !== 'ready') return;

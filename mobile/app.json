@@ -53,6 +53,7 @@
     ],
     "android": {
       "package": "com.izit.app",
+      "permissions": ["android.permission.VIBRATE"],
       "adaptiveIcon": {
         "backgroundColor": "#F3EFE6",
         "foregroundImage": "./assets/android-icon-foreground.png",

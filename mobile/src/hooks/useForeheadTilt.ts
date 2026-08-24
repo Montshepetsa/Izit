@@ -1,15 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { Accelerometer } from 'expo-sensors';
-
-const TRIGGER = 0.72;
-const NEUTRAL = 0.32;
+import { createTiltTracker, reduceTiltSample } from './foreheadTilt';
 
 export function useForeheadTilt(
   enabled: boolean,
   onCorrect: () => void,
   onSkip: () => void
 ): void {
-  const armedRef = useRef(true);
+  const trackerRef = useRef(createTiltTracker());
   const onCorrectRef = useRef(onCorrect);
   const onSkipRef = useRef(onSkip);
   onCorrectRef.current = onCorrect;
@@ -20,7 +18,7 @@ export function useForeheadTilt(
 
     let sub: { remove: () => void } | undefined;
     let cancelled = false;
-    armedRef.current = true;
+    trackerRef.current = createTiltTracker();
 
     void (async () => {
       const available = await Accelerometer.isAvailableAsync();
@@ -30,17 +28,10 @@ export function useForeheadTilt(
 
       Accelerometer.setUpdateInterval(80);
       sub = Accelerometer.addListener(({ z }) => {
-        if (z > TRIGGER && armedRef.current) {
-          armedRef.current = false;
-          onSkipRef.current();
-          return;
-        }
-        if (z < -TRIGGER && armedRef.current) {
-          armedRef.current = false;
-          onCorrectRef.current();
-          return;
-        }
-        if (Math.abs(z) < NEUTRAL) armedRef.current = true;
+        const { next, gesture } = reduceTiltSample(trackerRef.current, z);
+        trackerRef.current = next;
+        if (gesture === 'skip') onSkipRef.current();
+        else if (gesture === 'correct') onCorrectRef.current();
       });
       if (cancelled) sub.remove();
     })();
